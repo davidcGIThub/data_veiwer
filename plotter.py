@@ -24,12 +24,14 @@ class Plotter(QtWidgets.QMainWindow):
         widget.setLayout(self._layout)
         self.setCentralWidget(widget)
         self._pen = pg.mkPen(color=(255, 0, 0))
+        self._update_flag = False
         self.timer = QtCore.QTimer()
         self.timer.setInterval(50)
-        self.timer.timeout.connect(self.update_plot_data(0,np.random.randint(10),np.random.randint(10)))
+        self.timer.timeout.connect(self.animate_plot)
         self.timer.start()
 
     def add_plot(self, id="", xlabel="x_label", ylabel="y_label"):
+        print("add plot data")
         row = self._num_plots//self._plots_per_row
         col = self._num_plots%self._plots_per_row
         plot_widget = pg.PlotWidget()
@@ -41,14 +43,26 @@ class Plotter(QtWidgets.QMainWindow):
         self._plot_dict[id] = self._num_plots
         self._xdata.append(np.array([]))
         self._ydata.append(np.array([]))
-        self._data_lines.append(self.layout.itemAt(0).widget().plot(np.array([]), np.array([]), pen=self._pen))
+        data_line = self._layout.itemAt(0).widget().plot(np.array([]), np.array([]), pen=self._pen)
+        self._data_lines.append(data_line)
         self._num_plots += 1
 
     def update_plot_data(self, id, xvalue, yvalue):
+        print("update plot data")
         index = self._plot_dict[id]
         self._xdata[index] = np.append(self._xdata[index], xvalue)
         self._ydata[index] = np.append(self._ydata[index], yvalue)
-        self._data_lines[index].set_data(self._xdata,self._ydata)
+        self._update_flag = True
+
+    def animate_plot(self):
+        if(self._update_flag):
+            # data_line = self._data_lines[0]
+            x_data = self._xdata[0]
+            y_data = self._ydata[0]
+            print("xdata: " , x_data)
+            print("ydata: " , y_data)
+            self._data_lines[0].setData(x_data, y_data)
+            self._update_flag = False
 
 
 
@@ -56,10 +70,11 @@ class Plotter(QtWidgets.QMainWindow):
 app = QtWidgets.QApplication(sys.argv)
 plotter = Plotter(2)
 plotter.add_plot("id1", xlabel="time", ylabel="units")
-plotter.add_plot("id1", xlabel="time", ylabel="units")
-plotter.add_plot("id1", xlabel="time", ylabel="units")
-plotter.add_plot("id1", xlabel="time", ylabel="units")
-plotter.add_plot("id1", xlabel="time", ylabel="units")
-
+plotter.add_plot("id2", xlabel="time", ylabel="units")
+plotter.add_plot("id3", xlabel="time", ylabel="units")
+plotter.add_plot("id4", xlabel="time", ylabel="units")
+plotter.add_plot("id5", xlabel="time", ylabel="units")
 plotter.show()
+for i in range(10):
+    plotter.update_plot_data("id1", 3, 2)
 sys.exit(app.exec())
