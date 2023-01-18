@@ -4,12 +4,11 @@ import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 import sys  # We need sys so that we can pass argv to QApplication
 import numpy as np
-import os
 import random
 import time
 
 class Plotter():
-    def __init__(self, plots_per_row):
+    def __init__(self, plots_per_row, window_width=1280, window_height=800):
         self._app = pg.QtWidgets.QApplication([])
         self._window = pg.QtWidgets.QMainWindow()
         self._layout = pg.QtWidgets.QGridLayout()
@@ -22,11 +21,11 @@ class Plotter():
         self._ydata_list = []
         self._data_lines_list = []
         self._pen_list = []
-        widget = QtWidgets.QWidget()
-        widget.setLayout(self._layout)
-        self._window.setCentralWidget(widget)
+        self._widget = QtWidgets.QWidget()
+        self._widget.setLayout(self._layout)
+        self._window.setCentralWidget(self._widget)
+        self._window.resize(window_width,window_height)
         self._window.show()
-        # self._pen = pg.mkPen(color=(255, 0, 0))
         
     def add_plot(self, plot_id="", xlabel="x_label", ylabel="y_label", legend = True, bacground_color=(255,0,0)): #fix backgournd color stuff
         row = self._num_plots//self._plots_per_row
@@ -38,38 +37,48 @@ class Plotter():
         if plot_id == "":
             plot_id = str(self._num_plots)
         self._plot_dict[plot_id] = self._num_plots
-        self._xdata_list.append(np.array([]))
-        self._ydata_list.append(np.array([]))
-        pen = pg.mkPen(color=data_color)
+        self._xdata_list.append([])
+        self._ydata_list.append([])
         if legend == True:
             self._layout.itemAt(self._num_plots).widget().addLegend()
-        # data_line = self._layout.itemAt(self._num_plots).widget().plot(np.array([]), np.array([]),
-        #     name=data_label,symbol='+', pen=pen)
-        self._data_lines_list.append([data_line]) ### add data line in data line function, not here, that way can ask line thicnkess too
+        self._data_lines_list.append([])
         self._num_plots += 1
 
-    def add_data_line(self, plot_id, data_label, data_color, data_thickness): #add func to change line thickenss
+    def add_data_line(self, plot_id, data_label, data_color=(255,0,0), data_thickness=15): #add func to change line thickenss
         plot_index = self._plot_dict[plot_id]
-        pen = pg.mkPen(color=line_color)
-        data_line = self._layout.itemAt(plot_index).widget().plot(np.array([]), np.array([]),
-            name=line_label, pen=pen)
+        pen = pg.mkPen(color=data_color)
+        data_line = self._layout.itemAt(plot_index).widget().plot([],[],
+            name = data_label, width=data_thickness, pen=pen)
         self._data_lines_list[plot_index].append(data_line)
+        self._xdata_list[plot_index].append([])
+        self._ydata_list[plot_index].append([])
 
-    def update_plot_data(self, plot_id, xvalue, yvalue, line_number = 0):
+    def add_plot_data_point(self, plot_id, dataset_number, xvalue, yvalue):
         index = self._plot_dict[plot_id]
-        self._xdata_list[index] = np.append(self._xdata_list[index], xvalue)
-        self._ydata_list[index] = np.append(self._ydata_list[index], yvalue)
-        print("printed:" , self._data_lines_list[index][line_number])
-        self._data_lines_list[index][line_number].setData(self._xdata_list[index], self._ydata_list[index])
-
+        self._xdata_list[index][dataset_number].append(xvalue)
+        self._ydata_list[index][dataset_number].append(yvalue)
+        self._data_lines_list[index][dataset_number].setData(self._xdata_list[index][dataset_number],
+            self._ydata_list[index][dataset_number])
+    
     def update_window(self, sleep_time = 0):
         self._app.processEvents()
         time.sleep(sleep_time)
 
+    def save_image(self,image_name="plotter_image.png"):
+        self._widget.grab().save(image_name)
+
 p = Plotter(3)
-p.add_plot(plot_id="foo", xlabel="xXx", ylabel="yYy", data_label="lab", data_color=(0,255,0))
-p.add_plot(plot_id="fi", xlabel="xs", ylabel="ys", data_label="labelz", data_color=(0,0,255))
+p.add_plot(plot_id="foo", xlabel="xXx", ylabel="yYy")
+p.add_plot(plot_id="", xlabel="xXx", ylabel="yYy")
+p.add_plot(plot_id="", xlabel="xXx", ylabel="yYy")
+p.add_data_line(plot_id="foo",data_label="truth",data_color=(0,255,0),data_thickness=20)
+p.add_plot(plot_id="fi", xlabel="xs", ylabel="ys")
+p.add_data_line(plot_id="fi",data_label="estimate",data_color=(0,0,255),data_thickness=10)
+p.add_data_line(plot_id="fi",data_label="truth",data_color=(255,0,0),data_thickness=10)
 for i in range(10):
-    p.update_plot_data("foo",i,random.randint(0,20))
-    p.update_plot_data("fi",i,random.randint(0,20))
-    p.update_window(2)
+    p.add_plot_data_point("foo",0,i,random.randint(0,20))
+    p.add_plot_data_point("fi",0,i,random.randint(0,20))
+    p.add_plot_data_point("fi",1,i,random.randint(0,20))
+    p.update_window(1)
+    if i == 9:
+        p.save_image()
